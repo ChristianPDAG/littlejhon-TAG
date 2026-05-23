@@ -1,0 +1,38 @@
+# ─── Secrets (NEVER commit) ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ─── Foundry build artifacts ────────────────────────────────────────
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# ─── Foundry dependencies (use `forge install` to fetch) ────────────
+contracts/lib/
+
+# ─── Node / future backend ──────────────────────────────────────────
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp.*
+
+# ─── OS / Editor ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Coverage / debug ───────────────────────────────────────────────
+coverage/
+coverage.json
+lcov.info
+*.lcov
