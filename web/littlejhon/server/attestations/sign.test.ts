@@ -13,10 +13,10 @@ describe("risk attestation typed data", () => {
       token: "0x1111111111111111111111111111111111111111",
       from: "0x4e5A7B9F7F66c208bDDeD352356B33a3A634AD6D",
       to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      amount: 25_000_000n,
-      nonce: 1n,
-      deadline: 1_780_000_000n,
-      riskScore: 12n,
+      amount: BigInt(25_000_000),
+      nonce: BigInt(1),
+      deadline: BigInt(1_780_000_000),
+      riskScore: BigInt(12),
     } as const;
 
     const signature = await signer.signTypedData({

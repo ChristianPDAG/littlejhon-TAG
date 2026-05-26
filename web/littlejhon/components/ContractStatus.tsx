@@ -12,18 +12,14 @@ type Health = {
   chain: {
     id: number;
     name: string;
-    blockExplorers?: {
-      default?: {
-        url?: string;
-      };
-    };
+    explorer?: string;
   };
   maxRiskScore: number;
 };
 
 export function ContractStatus({ health }: { health: Health | null }) {
   const env = getPublicEnv();
-  const explorer = health?.chain.blockExplorers?.default?.url ?? env.NEXT_PUBLIC_RH_EXPLORER_URL;
+  const explorer = health?.chain.explorer ?? env.NEXT_PUBLIC_RH_EXPLORER_URL;
   const contracts = health?.contracts ?? {
     shieldGuard: env.NEXT_PUBLIC_SHIELD_GUARD_ADDRESS,
     complianceRegistry: env.NEXT_PUBLIC_COMPLIANCE_REGISTRY_ADDRESS,

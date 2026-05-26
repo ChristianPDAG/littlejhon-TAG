@@ -9,10 +9,14 @@ import { shieldRwaGuardAbi, shieldTransferTypes } from "@/lib/contracts/abis";
 import type { AttestResponse, RiskCheckRequest, RiskCheckResponse } from "@/lib/types";
 
 export function ExecutionPanel({
+  executionEnabled,
+  healthStatus,
   request,
   result,
   onTransaction,
 }: {
+  executionEnabled: boolean | null;
+  healthStatus: "loading" | "ready" | "error";
   request: RiskCheckRequest | null;
   result: RiskCheckResponse | null;
   onTransaction: (txHash: string) => void;
@@ -27,10 +31,10 @@ export function ExecutionPanel({
 
   const canAttempt = useMemo(() => {
     if (!request || !result || !address || result.decision === "BLOCK") return false;
-    if (!env.NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION) return false;
+    if (executionEnabled !== true) return false;
     if (result.decision !== "ALLOW" && !confirmed) return false;
     return true;
-  }, [address, confirmed, env.NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION, request, result]);
+  }, [address, confirmed, executionEnabled, request, result]);
 
   async function execute() {
     if (!request || !result || !address || !chain) return;
@@ -109,7 +113,19 @@ export function ExecutionPanel({
           <span>Confirm manual review before execution.</span>
         </label>
       ) : null}
-      {!env.NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION ? (
+      {healthStatus === "loading" ? (
+        <div className="notice">
+          <ShieldAlert size={16} />
+          Checking execution configuration.
+        </div>
+      ) : null}
+      {healthStatus === "error" ? (
+        <div className="notice">
+          <ShieldAlert size={16} />
+          Could not read /api/health. Check the route response before executing on-chain.
+        </div>
+      ) : null}
+      {healthStatus === "ready" && !executionEnabled ? (
         <div className="notice">
           <ShieldAlert size={16} />
           On-chain execution is disabled by env until live token prerequisites are configured.

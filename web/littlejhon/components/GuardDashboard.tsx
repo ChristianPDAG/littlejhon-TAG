@@ -16,21 +16,30 @@ import type { RiskCheckRequest, RiskCheckResponse, ScenarioId } from "@/lib/type
 
 const HISTORY_KEY = "tag-demo-history";
 
+type HealthResponse = {
+  ok: boolean;
+  signer: string | null;
+  executionEnabled: boolean;
+  contracts: Record<string, string>;
+  chain: {
+    id: number;
+    name: string;
+    explorer?: string;
+  };
+  maxRiskScore: number;
+};
+
 export function GuardDashboard() {
   const env = getPublicEnv();
   const { address, chain } = useAccount();
-  const [health, setHealth] = useState(null);
+  const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [healthStatus, setHealthStatus] = useState<"loading" | "ready" | "error">("loading");
   const [selectedId, setSelectedId] = useState<ScenarioId>("safe-transfer");
   const [result, setResult] = useState<RiskCheckResponse | null>(null);
   const [request, setRequest] = useState<RiskCheckRequest | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    const stored = window.localStorage.getItem(HISTORY_KEY);
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState("");
-
   const selectedScenario = useMemo(
     () => demoScenarios.find((scenario) => scenario.id === selectedId) ?? demoScenarios[0],
     [selectedId],
@@ -38,10 +47,27 @@ export function GuardDashboard() {
 
   useEffect(() => {
     fetch(`${env.NEXT_PUBLIC_API_BASE_PATH}/health`)
-      .then((response) => response.json())
-      .then(setHealth)
-      .catch(() => setHealth(null));
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Health endpoint failed.");
+        }
+        return (await response.json()) as HealthResponse;
+      })
+      .then((payload) => {
+        setHealth(payload);
+        setHealthStatus("ready");
+      })
+      .catch(() => {
+        setHealth(null);
+        setHealthStatus("error");
+      });
 
+    const stored = window.localStorage.getItem(HISTORY_KEY);
+    if (stored) {
+      // Avoid hydration mismatches by only syncing localStorage after mount.
+      const parsed = JSON.parse(stored) as HistoryItem[];
+      setTimeout(() => setHistory(parsed), 0);
+    }
   }, [env.NEXT_PUBLIC_API_BASE_PATH]);
 
   function persistHistory(items: HistoryItem[]) {
@@ -152,7 +178,13 @@ export function GuardDashboard() {
           </section>
           {error ? <p className="error-text">{error}</p> : null}
           <RiskPanel result={result} />
-          <ExecutionPanel request={request} result={result} onTransaction={handleTransaction} />
+          <ExecutionPanel
+            executionEnabled={healthStatus === "ready" ? health?.executionEnabled ?? false : null}
+            healthStatus={healthStatus}
+            request={request}
+            result={result}
+            onTransaction={handleTransaction}
+          />
         </div>
         <aside className="side-column">
           <ContractStatus health={health} />

@@ -8,11 +8,16 @@ export async function GET() {
   const publicEnv = getPublicEnv();
   const serverEnv = getServerEnv();
   const chain = getDefaultChain();
+  const executionEnabled = publicEnv.NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION && serverEnv.ENABLE_ONCHAIN_EXECUTION;
 
   return NextResponse.json({
     ok: true,
     app: "Tokenized Asset Guard",
-    chain,
+    chain: {
+      id: chain.id,
+      name: chain.name,
+      explorer: chain.blockExplorers?.default.url,
+    },
     supportedChains: getSupportedChains().map((supportedChain) => ({
       id: supportedChain.id,
       name: supportedChain.name,
@@ -20,7 +25,11 @@ export async function GET() {
     })),
     contracts: getContractAddresses(),
     signer: getTrustedSignerAddress(),
-    executionEnabled: publicEnv.NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION && serverEnv.ENABLE_ONCHAIN_EXECUTION,
+    executionEnabled,
+    executionFlags: {
+      publicEnabled: publicEnv.NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION,
+      serverEnabled: serverEnv.ENABLE_ONCHAIN_EXECUTION,
+    },
     attestationTtlSeconds: serverEnv.ATTESTATION_TTL_SECONDS,
     maxRiskScore: serverEnv.MAX_RISK_SCORE,
   });

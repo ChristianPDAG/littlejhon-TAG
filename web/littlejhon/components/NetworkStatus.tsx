@@ -3,7 +3,7 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAccount, useSwitchChain } from "wagmi";
 import { getPublicEnv } from "@/config/env";
-import { getSupportedChains } from "@/server/blockchain/chains";
+import { getSupportedChains } from "@/lib/blockchain/chains";
 
 export function NetworkStatus() {
   const env = getPublicEnv();
