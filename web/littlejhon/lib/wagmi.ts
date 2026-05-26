@@ -2,8 +2,8 @@
 
 import { createConfig, http } from "wagmi";
 import { injected } from "wagmi/connectors";
+import { getSupportedChains } from "@/lib/blockchain/chains";
 import { getPublicEnv } from "@/config/env";
-import { getSupportedChains } from "@/server/blockchain/chains";
 
 const env = getPublicEnv();
 const [robinhoodTestnet, arbitrumSepolia] = getSupportedChains();
