@@ -1,0 +1,164 @@
+"use client";
+
+import { RefreshCw, ScanSearch } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useAccount } from "wagmi";
+import { ContractStatus } from "@/components/ContractStatus";
+import { ExecutionPanel } from "@/components/ExecutionPanel";
+import { HistoryList, type HistoryItem } from "@/components/HistoryList";
+import { NetworkStatus } from "@/components/NetworkStatus";
+import { RiskPanel } from "@/components/RiskPanel";
+import { ScenarioSelector } from "@/components/ScenarioSelector";
+import { WalletConnectButton } from "@/components/WalletConnectButton";
+import { getPublicEnv } from "@/config/env";
+import { demoScenarios } from "@/lib/demo/scenarios";
+import type { RiskCheckRequest, RiskCheckResponse, ScenarioId } from "@/lib/types";
+
+const HISTORY_KEY = "tag-demo-history";
+
+export function GuardDashboard() {
+  const env = getPublicEnv();
+  const { address, chain } = useAccount();
+  const [health, setHealth] = useState(null);
+  const [selectedId, setSelectedId] = useState<ScenarioId>("safe-transfer");
+  const [result, setResult] = useState<RiskCheckResponse | null>(null);
+  const [request, setRequest] = useState<RiskCheckRequest | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    const stored = window.localStorage.getItem(HISTORY_KEY);
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [isChecking, setIsChecking] = useState(false);
+  const [error, setError] = useState("");
+
+  const selectedScenario = useMemo(
+    () => demoScenarios.find((scenario) => scenario.id === selectedId) ?? demoScenarios[0],
+    [selectedId],
+  );
+
+  useEffect(() => {
+    fetch(`${env.NEXT_PUBLIC_API_BASE_PATH}/health`)
+      .then((response) => response.json())
+      .then(setHealth)
+      .catch(() => setHealth(null));
+
+  }, [env.NEXT_PUBLIC_API_BASE_PATH]);
+
+  function persistHistory(items: HistoryItem[]) {
+    setHistory(items);
+    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+  }
+
+  async function runRiskCheck() {
+    if (!address) {
+      setError("Connect a wallet to build a realistic transfer intent.");
+      return;
+    }
+
+    setError("");
+    setIsChecking(true);
+
+    const nextRequest = selectedScenario.buildRequest({
+      chainId: chain?.id ?? env.NEXT_PUBLIC_DEFAULT_CHAIN_ID,
+      from: address,
+      token: undefined,
+    });
+
+    try {
+      const response = await fetch(`${env.NEXT_PUBLIC_API_BASE_PATH}/risk-check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextRequest),
+      });
+      const payload = (await response.json()) as RiskCheckResponse & { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Risk check failed.");
+      }
+
+      setRequest(nextRequest);
+      setResult(payload);
+      persistHistory(
+        [
+          {
+            simulationId: payload.simulationId,
+            decision: payload.decision,
+            riskScore: payload.riskScore,
+            scenario: selectedScenario.title,
+            createdAt: new Date().toISOString(),
+          },
+          ...history,
+        ].slice(0, 8),
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Risk check failed.");
+    } finally {
+      setIsChecking(false);
+    }
+  }
+
+  function handleTransaction(txHash: string) {
+    if (!result) return;
+    persistHistory(
+      history.map((item) => (item.simulationId === result.simulationId ? { ...item, txHash } : item)),
+    );
+  }
+
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">Tokenized Asset Guard</p>
+          <h1>Shielded RWA transfer console</h1>
+        </div>
+        <div className="topbar-actions">
+          <NetworkStatus />
+          <WalletConnectButton />
+        </div>
+      </header>
+
+      <section className="summary-band">
+        <div>
+          <strong>API analyzes</strong>
+          <span>Deterministic policies classify every intent before signing.</span>
+        </div>
+        <div>
+          <strong>Backend attests</strong>
+          <span>RiskAttestation matches the deployed ShieldRWAGuard EIP-712 shape.</span>
+        </div>
+        <div>
+          <strong>Contract enforces</strong>
+          <span>safeTransfer verifies user signature, backend signature, compliance, PoR and breakers.</span>
+        </div>
+      </section>
+
+      <div className="workspace-grid">
+        <div className="main-column">
+          <ScenarioSelector scenarios={demoScenarios} selectedId={selectedId} onSelect={setSelectedId} />
+          <section className="panel action-panel">
+            <div>
+              <div className="panel-heading">
+                <ScanSearch size={18} />
+                <h2>Selected operation</h2>
+              </div>
+              <p>
+                {selectedScenario.title}: {selectedScenario.description}
+              </p>
+            </div>
+            <button className="primary-button" disabled={isChecking || !address} onClick={runRiskCheck} type="button">
+              <RefreshCw size={16} />
+              {isChecking ? "Checking" : "Run risk check"}
+            </button>
+          </section>
+          {error ? <p className="error-text">{error}</p> : null}
+          <RiskPanel result={result} />
+          <ExecutionPanel request={request} result={result} onTransaction={handleTransaction} />
+        </div>
+        <aside className="side-column">
+          <ContractStatus health={health} />
+          <HistoryList items={history} />
+        </aside>
+      </div>
+    </main>
+  );
+}
