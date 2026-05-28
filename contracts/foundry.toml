@@ -17,4 +17,5 @@ robinhood_testnet = "https://rpc.testnet.chain.robinhood.com"
 arbitrum_sepolia = "https://arb-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
 
 [etherscan]
-robinhood_testnet = { key = "${BLOCKSCOUT_API_KEY}", url = "https://explorer.testnet.chain.robinhood.com/api/" }
+robinhood_testnet = { key = "${BLOCKSCOUT_API_KEY}", url = "https://explorer.testnet.chain.robinhood.com/api/", chain = 46630 }
+arbitrum_sepolia  = { key = "${ARBISCAN_API_KEY}",    url = "https://api.etherscan.io/v2/api",                     chain = 421614 }
