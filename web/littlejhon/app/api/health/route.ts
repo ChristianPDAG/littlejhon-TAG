@@ -3,12 +3,17 @@ import { getPublicEnv, getServerEnv } from "@/config/env";
 import { getContractAddresses } from "@/server/blockchain/contracts";
 import { getDefaultChain, getSupportedChains } from "@/server/blockchain/chains";
 import { getTrustedSignerAddress } from "@/server/attestations/sign";
+import { getContractHealth } from "@/server/blockchain/onchain";
 
 export async function GET() {
   const publicEnv = getPublicEnv();
   const serverEnv = getServerEnv();
   const chain = getDefaultChain();
-  const executionEnabled = publicEnv.NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION && serverEnv.ENABLE_ONCHAIN_EXECUTION;
+  const contractHealth = await getContractHealth();
+  const executionEnabled =
+    publicEnv.NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION &&
+    serverEnv.ENABLE_ONCHAIN_EXECUTION &&
+    contractHealth.criticalIssues.length === 0;
 
   return NextResponse.json({
     ok: true,
@@ -25,12 +30,14 @@ export async function GET() {
     })),
     contracts: getContractAddresses(),
     signer: getTrustedSignerAddress(),
+    contractHealth,
     executionEnabled,
     executionFlags: {
       publicEnabled: publicEnv.NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION,
       serverEnabled: serverEnv.ENABLE_ONCHAIN_EXECUTION,
+      contractReady: contractHealth.criticalIssues.length === 0,
     },
     attestationTtlSeconds: serverEnv.ATTESTATION_TTL_SECONDS,
-    maxRiskScore: serverEnv.MAX_RISK_SCORE,
+    maxRiskScore: contractHealth.maxRiskScoreOnchain ?? serverEnv.MAX_RISK_SCORE,
   });
 }

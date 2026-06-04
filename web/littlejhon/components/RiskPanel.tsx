@@ -56,6 +56,13 @@ export function RiskPanel({ result }: { result: RiskCheckResponse | null }) {
           ))}
         </div>
       ) : null}
+      {result.onchainPreview ? (
+        <div className="onchain-preview">
+          <strong>{result.onchainPreview.canTransfer ? "On-chain ready" : "On-chain gated"}</strong>
+          <span>{result.onchainPreview.reason}</span>
+          {result.onchainPreview.token ? <small>Token {result.onchainPreview.token}</small> : null}
+        </div>
+      ) : null}
     </section>
   );
 }

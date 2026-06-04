@@ -12,13 +12,15 @@
   --orange: #b34d18;
   --red: #b42318;
   --green: #137a4b;
+  --font-system-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-system-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-system-sans);
+  --font-mono: var(--font-system-mono);
 }
 
 * {
@@ -31,7 +33,7 @@ body {
     linear-gradient(180deg, rgba(24, 92, 72, 0.08), rgba(246, 247, 244, 0) 360px),
     var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-system-sans), Arial, Helvetica, sans-serif;
 }
 
 button,
@@ -201,7 +203,7 @@ button:disabled {
 .scenario-card em {
   font-size: 0.76rem;
   font-style: normal;
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-system-mono), monospace;
 }
 
 .action-panel,
@@ -317,7 +319,8 @@ button:disabled {
 .reason-list,
 .history-list,
 .contract-grid,
-.prerequisites {
+.prerequisites,
+.health-grid {
   display: grid;
   gap: 8px;
 }
@@ -326,7 +329,9 @@ button:disabled {
 .history-item,
 .contract-grid a,
 .prerequisites span,
-.notice {
+.notice,
+.onchain-preview,
+.asset-state {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.62);
@@ -356,6 +361,44 @@ button:disabled {
   flex-wrap: wrap;
   margin-top: 12px;
   font-size: 0.8rem;
+}
+
+.health-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.health-grid span {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 0.76rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.health-grid span.ok {
+  color: var(--green);
+  border-color: rgba(19, 122, 75, 0.28);
+}
+
+.health-grid span.bad {
+  color: var(--red);
+  border-color: rgba(180, 35, 24, 0.34);
+}
+
+.onchain-preview,
+.asset-state {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.onchain-preview span,
+.asset-state span,
+.onchain-preview small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .history-item {

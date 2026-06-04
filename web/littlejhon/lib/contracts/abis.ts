@@ -46,6 +46,33 @@ export const shieldRwaGuardAbi = [
     inputs: [],
     outputs: [{ name: "", type: "address" }],
   },
+  {
+    type: "function",
+    name: "domainSeparator",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "tokenConfigs",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [
+      { name: "whitelisted", type: "bool" },
+      { name: "transferLimit", type: "uint256" },
+    ],
+  },
+  {
+    type: "function",
+    name: "usedNonces",
+    stateMutability: "view",
+    inputs: [
+      { name: "user", type: "address" },
+      { name: "nonce", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
 ] as const;
 
 export const erc20Abi = [
@@ -79,6 +106,140 @@ export const erc20Abi = [
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
+export const complianceRegistryAbi = [
+  {
+    type: "function",
+    name: "isVerified",
+    stateMutability: "view",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "getIdentity",
+    stateMutability: "view",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [
+      { name: "jurisdiction", type: "uint256" },
+      { name: "expiry", type: "uint256" },
+      { name: "active", type: "bool" },
+    ],
+  },
+  {
+    type: "function",
+    name: "isJurisdictionBlocked",
+    stateMutability: "view",
+    inputs: [{ name: "jurisdiction", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
+
+export const proofOfReserveAbi = [
+  {
+    type: "function",
+    name: "verifyReserve",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "getReserveRatio",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ name: "ratio", type: "uint256" }],
+  },
+] as const;
+
+export const circuitBreakerAbi = [
+  {
+    type: "function",
+    name: "isHalted",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "getState",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ name: "", type: "uint8" }],
+  },
+  {
+    type: "function",
+    name: "checkPriceDeviation",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ name: "deviationBps", type: "uint256" }],
+  },
+] as const;
+
+export const safetyVaultAbi = [
+  {
+    type: "function",
+    name: "tokens",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [
+      { name: "allowed", type: "bool" },
+      { name: "cap", type: "uint256" },
+      { name: "totalDeposited", type: "uint256" },
+    ],
+  },
+  {
+    type: "function",
+    name: "balances",
+    stateMutability: "view",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "user", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "emergencyDrained",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
+
+export const governanceTimelockAbi = [
+  {
+    type: "function",
+    name: "minDelay",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "GRACE_PERIOD",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "MAX_DELAY",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
   },
 ] as const;
 

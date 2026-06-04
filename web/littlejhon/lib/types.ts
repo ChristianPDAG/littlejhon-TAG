@@ -40,6 +40,7 @@ export type RiskCheckResponse = {
   simulationId: string;
   prerequisites: string[];
   decodedAction: string;
+  onchainPreview?: OnchainTransferPreview;
 };
 
 export type AttestResponse = RiskCheckResponse & {
@@ -54,4 +55,35 @@ export type AttestResponse = RiskCheckResponse & {
     signer: Address;
     signature: Hex;
   };
+};
+
+export type OnchainTransferPreview = {
+  checked: boolean;
+  executable: boolean;
+  canTransfer: boolean;
+  reason: string;
+  token?: Address;
+  transferLimit?: string;
+  tokenWhitelisted?: boolean;
+  senderVerified?: boolean;
+  recipientVerified?: boolean;
+  circuitHalted?: boolean;
+  reserveBacked?: boolean;
+  reserveRatio?: string;
+  safetyVaultAllowed?: boolean;
+  safetyVaultCap?: string;
+  safetyVaultEmergencyDrained?: boolean;
+};
+
+export type ContractHealth = {
+  codePresent: Record<string, boolean>;
+  trustedSignerOnchain: Address | null;
+  backendSigner: Address | null;
+  signerMatches: boolean;
+  maxRiskScoreOnchain: number | null;
+  maxRiskScoreEnv: number;
+  maxRiskMatches: boolean;
+  domainSeparator: Hex | null;
+  timelockMinDelay: string | null;
+  criticalIssues: string[];
 };

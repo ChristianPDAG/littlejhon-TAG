@@ -11,6 +11,8 @@ export function getContractAddresses() {
     complianceRegistry: env.NEXT_PUBLIC_COMPLIANCE_REGISTRY_ADDRESS,
     proofOfReserve: env.NEXT_PUBLIC_PROOF_OF_RESERVE_ADDRESS,
     circuitBreaker: env.NEXT_PUBLIC_CIRCUIT_BREAKER_ADDRESS,
+    safetyVault: env.NEXT_PUBLIC_SAFETY_VAULT_ADDRESS,
+    governanceTimelock: env.NEXT_PUBLIC_GOVERNANCE_TIMELOCK_ADDRESS,
   } satisfies Record<string, Address>;
 }
 

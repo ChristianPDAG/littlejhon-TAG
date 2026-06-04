@@ -11,8 +11,9 @@ import { RiskPanel } from "@/components/RiskPanel";
 import { ScenarioSelector } from "@/components/ScenarioSelector";
 import { WalletConnectButton } from "@/components/WalletConnectButton";
 import { getPublicEnv } from "@/config/env";
-import { demoScenarios } from "@/lib/demo/scenarios";
-import type { RiskCheckRequest, RiskCheckResponse, ScenarioId } from "@/lib/types";
+import { demoScenarios, resolveScenarioToken } from "@/lib/demo/scenarios";
+import type { Address } from "viem";
+import type { ContractHealth, RiskCheckRequest, RiskCheckResponse, ScenarioId } from "@/lib/types";
 
 const HISTORY_KEY = "tag-demo-history";
 
@@ -27,6 +28,7 @@ type HealthResponse = {
     explorer?: string;
   };
   maxRiskScore: number;
+  contractHealth: ContractHealth;
 };
 
 export function GuardDashboard() {
@@ -87,7 +89,11 @@ export function GuardDashboard() {
     const nextRequest = selectedScenario.buildRequest({
       chainId: chain?.id ?? env.NEXT_PUBLIC_DEFAULT_CHAIN_ID,
       from: address,
-      token: undefined,
+      token: resolveScenarioToken({
+        scenarioId: selectedId,
+        chainId: chain?.id ?? env.NEXT_PUBLIC_DEFAULT_CHAIN_ID,
+        envToken: env.NEXT_PUBLIC_DEMO_TRWA_TOKEN as Address | undefined,
+      }),
     });
 
     try {
@@ -187,7 +193,7 @@ export function GuardDashboard() {
           />
         </div>
         <aside className="side-column">
-          <ContractStatus health={health} />
+          <ContractStatus health={health} preview={result?.onchainPreview} />
           <HistoryList items={history} />
         </aside>
       </div>

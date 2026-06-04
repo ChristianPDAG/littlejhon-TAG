@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { RiskCheckRequest } from "@/lib/types";
 import { audit } from "@/server/audit/log";
-import { evaluateRisk } from "@/server/policies/engine";
+import { evaluateRiskWithOnchain } from "@/server/policies/engine";
 import { riskCheckRequestSchema } from "@/server/policies/schemas";
 
 export async function POST(request: Request) {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = evaluateRisk(parsed.data as RiskCheckRequest);
+  const result = await evaluateRiskWithOnchain(parsed.data as RiskCheckRequest);
   audit("risk_check", {
     simulationId: result.simulationId,
     decision: result.decision,

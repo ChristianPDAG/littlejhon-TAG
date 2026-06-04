@@ -17,6 +17,14 @@ const ELIGIBLE_RECIPIENT = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Addre
 const INELIGIBLE_RECIPIENT = "0xdddddddddddddddddddddddddddddddddddddddd" as Address;
 const UNKNOWN_SPENDER = "0xdead00000000000000000000000000000000beef" as Address;
 const FAKE_TOKEN = "0x3333333333333333333333333333333333333333" as Address;
+const RH_E2E_TRWA = "0xc7624150c28bF26cdF920A0715a7c0ba614faE16" as Address;
+
+export function resolveScenarioToken(input: { scenarioId: ScenarioId; chainId: number; envToken?: Address }) {
+  if (input.envToken) return input.envToken;
+  if (input.scenarioId === "safe-transfer" && input.chainId === 46630) return RH_E2E_TRWA;
+  if (input.scenarioId === "fake-token") return FAKE_TOKEN;
+  return undefined;
+}
 
 export const demoScenarios: DemoScenario[] = [
   {
@@ -31,7 +39,7 @@ export const demoScenarios: DemoScenario[] = [
       from,
       to: ELIGIBLE_RECIPIENT,
       asset: "AAPLx",
-      token,
+      token: token ?? (chainId === 46630 ? RH_E2E_TRWA : undefined),
       amount: parseUnits("25", 6).toString(),
       value: "0",
       context: {

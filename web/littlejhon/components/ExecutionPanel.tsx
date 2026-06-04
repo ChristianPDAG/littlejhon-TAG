@@ -2,11 +2,29 @@
 
 import { Send, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useAccount, useSignTypedData, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useSignTypedData, useWriteContract } from "wagmi";
 import type { Address } from "viem";
 import { getPublicEnv } from "@/config/env";
-import { shieldRwaGuardAbi, shieldTransferTypes } from "@/lib/contracts/abis";
+import { erc20Abi, shieldRwaGuardAbi, shieldTransferTypes } from "@/lib/contracts/abis";
 import type { AttestResponse, RiskCheckRequest, RiskCheckResponse } from "@/lib/types";
+
+function explainContractError(cause: unknown) {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  const translations: [string, string][] = [
+    ["TokenNotWhitelisted", "Token is not whitelisted in ShieldRWAGuard."],
+    ["NonceAlreadyUsed", "This nonce was already consumed. Request a fresh attestation."],
+    ["RiskScoreTooHigh", "Backend risk score is above the on-chain max risk cap."],
+    ["RiskScoreOutOfRange", "Backend risk score is outside the contract scale."],
+    ["InvalidSignature", "Wallet signature does not match the transfer sender."],
+    ["InvalidAttestation", "Backend attestation signer does not match ShieldRWAGuard.trustedSigner."],
+    ["IdentityNotVerified", "Sender or recipient is not verified in ComplianceRegistry."],
+    ["BreakerIsTriggered", "CircuitBreaker is halted for this token."],
+    ["TransferExceedsLimit", "Amount exceeds the token transfer limit."],
+    ["reserve verification failed", "Proof of Reserve verification failed."],
+    ["allowance", "Token allowance is insufficient for ShieldRWAGuard."],
+  ];
+  return translations.find(([needle]) => message.includes(needle))?.[1] ?? message;
+}
 
 export function ExecutionPanel({
   executionEnabled,
@@ -23,6 +41,7 @@ export function ExecutionPanel({
 }) {
   const env = getPublicEnv();
   const { address, chain } = useAccount();
+  const publicClient = usePublicClient();
   const { signTypedDataAsync } = useSignTypedData();
   const { writeContractAsync } = useWriteContract();
   const [confirmed, setConfirmed] = useState(false);
@@ -32,17 +51,42 @@ export function ExecutionPanel({
   const canAttempt = useMemo(() => {
     if (!request || !result || !address || result.decision === "BLOCK") return false;
     if (executionEnabled !== true) return false;
+    if (chain?.id !== request.chainId) return false;
+    if (request.from.toLowerCase() !== address.toLowerCase()) return false;
+    if (!result.onchainPreview?.canTransfer) return false;
     if (result.decision !== "ALLOW" && !confirmed) return false;
     return true;
-  }, [address, confirmed, executionEnabled, request, result]);
+  }, [address, chain?.id, confirmed, executionEnabled, request, result]);
 
   async function execute() {
-    if (!request || !result || !address || !chain) return;
+    if (!request || !result || !address || !chain || !publicClient) return;
 
     setError("");
-    setStatus("Requesting backend attestation");
+    setStatus("Checking token allowance");
 
     try {
+      const token = request.token ?? result.onchainPreview?.token;
+      if (!token) throw new Error("No executable token configured for this scenario.");
+      const amount = BigInt(request.amount);
+      const allowance = await publicClient.readContract({
+        address: token,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [address, env.NEXT_PUBLIC_SHIELD_GUARD_ADDRESS],
+      });
+
+      if (allowance < amount) {
+        setStatus("Approving ShieldRWAGuard to transfer this token");
+        const approveHash = await writeContractAsync({
+          address: token,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [env.NEXT_PUBLIC_SHIELD_GUARD_ADDRESS, amount],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+      }
+
+      setStatus("Requesting backend attestation");
       const attestResponse = await fetch(`${env.NEXT_PUBLIC_API_BASE_PATH}/attest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,9 +138,11 @@ export function ExecutionPanel({
       });
 
       setStatus(`Transaction submitted: ${txHash}`);
+      await publicClient.waitForTransactionReceipt({ hash: txHash });
+      setStatus(`Transaction confirmed: ${txHash}`);
       onTransaction(txHash);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Execution failed.");
+      setError(explainContractError(cause));
       setStatus("");
     }
   }
@@ -129,6 +175,18 @@ export function ExecutionPanel({
         <div className="notice">
           <ShieldAlert size={16} />
           On-chain execution is disabled by env until live token prerequisites are configured.
+        </div>
+      ) : null}
+      {result?.onchainPreview && !result.onchainPreview.canTransfer ? (
+        <div className="notice">
+          <ShieldAlert size={16} />
+          {result.onchainPreview.reason}
+        </div>
+      ) : null}
+      {request && chain && chain.id !== request.chainId ? (
+        <div className="notice">
+          <ShieldAlert size={16} />
+          Switch wallet to chain {request.chainId} before signing typed data.
         </div>
       ) : null}
       <button className="primary-button full" disabled={!canAttempt} onClick={execute} type="button">

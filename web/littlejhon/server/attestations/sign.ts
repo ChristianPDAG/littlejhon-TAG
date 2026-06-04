@@ -15,6 +15,10 @@ export type RiskAttestationMessage = {
   riskScore: bigint;
 };
 
+function isPrivateKey(value: string | undefined): value is Hex {
+  return Boolean(value && /^0x[a-fA-F0-9]{64}$/.test(value));
+}
+
 export function getRiskDomain(chainId?: number) {
   const chain = getDefaultChain();
   const addresses = getContractAddresses();
@@ -29,7 +33,7 @@ export function getRiskDomain(chainId?: number) {
 
 export function getTrustedSignerAddress(): Address | null {
   const env = getServerEnv();
-  if (!env.TRUSTED_SIGNER_PRIVATE_KEY) {
+  if (!isPrivateKey(env.TRUSTED_SIGNER_PRIVATE_KEY)) {
     return null;
   }
 
@@ -38,8 +42,8 @@ export function getTrustedSignerAddress(): Address | null {
 
 export async function signRiskAttestation(message: RiskAttestationMessage, chainId: number) {
   const env = getServerEnv();
-  if (!env.TRUSTED_SIGNER_PRIVATE_KEY) {
-    throw new Error("TRUSTED_SIGNER_PRIVATE_KEY is required to sign attestations.");
+  if (!isPrivateKey(env.TRUSTED_SIGNER_PRIVATE_KEY)) {
+    throw new Error("A valid TRUSTED_SIGNER_PRIVATE_KEY is required to sign attestations.");
   }
 
   const signer = privateKeyToAccount(env.TRUSTED_SIGNER_PRIVATE_KEY);

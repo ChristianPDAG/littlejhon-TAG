@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import type { Address } from "viem";
 import type { RiskCheckRequest } from "@/lib/types";
 import { audit } from "@/server/audit/log";
-import { findAsset } from "@/server/assets/registry";
+import { findAsset, resolveExecutableToken } from "@/server/assets/registry";
 import { signRiskAttestation } from "@/server/attestations/sign";
-import { evaluateRisk, createNonce } from "@/server/policies/engine";
+import { evaluateRiskWithOnchain } from "@/server/policies/engine";
 import { attestRequestSchema } from "@/server/policies/schemas";
 import { getServerEnv } from "@/config/env";
+import { getContractHealth, createUnusedNonce, isNonceUsed } from "@/server/blockchain/onchain";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     nonce?: string;
     deadline?: string;
   };
-  const result = evaluateRisk(riskRequest);
+  const result = await evaluateRiskWithOnchain(riskRequest);
 
   if (result.decision === "BLOCK") {
     audit("attest_refused", {
@@ -45,8 +46,29 @@ export async function POST(request: Request) {
     );
   }
 
-  const asset = findAsset(riskRequest.token ?? riskRequest.asset);
-  const token = riskRequest.token ?? asset?.address;
+  const health = await getContractHealth();
+  if (health.criticalIssues.length > 0) {
+    return NextResponse.json(
+      {
+        ...result,
+        error: `On-chain execution is not ready: ${health.criticalIssues.join("; ")}`,
+      },
+      { status: 503 },
+    );
+  }
+
+  if (result.riskScore > (health.maxRiskScoreOnchain ?? env.MAX_RISK_SCORE)) {
+    return NextResponse.json(
+      {
+        ...result,
+        error: "Risk score exceeds ShieldRWAGuard.maxRiskScore.",
+      },
+      { status: 409 },
+    );
+  }
+
+  const asset = findAsset(riskRequest.token ?? riskRequest.asset, riskRequest.chainId);
+  const token = riskRequest.token ?? resolveExecutableToken(riskRequest.asset, riskRequest.chainId);
 
   if (!token) {
     return NextResponse.json(
@@ -58,7 +80,36 @@ export async function POST(request: Request) {
     );
   }
 
-  const nonce = BigInt(riskRequest.nonce ?? createNonce(riskRequest));
+  if (!asset?.executable) {
+    return NextResponse.json(
+      {
+        ...result,
+        error: "This asset is policy-only for the selected chain and is not executable on-chain.",
+      },
+      { status: 422 },
+    );
+  }
+
+  if (!result.onchainPreview?.canTransfer) {
+    return NextResponse.json(
+      {
+        ...result,
+        error: result.onchainPreview?.reason ?? "ShieldRWAGuard.canSafeTransfer rejected this operation.",
+      },
+      { status: 409 },
+    );
+  }
+
+  const nonce = BigInt(riskRequest.nonce ?? (await createUnusedNonce(riskRequest.from)).toString());
+  if (await isNonceUsed(riskRequest.from, nonce)) {
+    return NextResponse.json(
+      {
+        ...result,
+        error: "Nonce already used by this sender. Request a fresh attestation.",
+      },
+      { status: 409 },
+    );
+  }
   const deadline = BigInt(
     riskRequest.deadline ?? Math.floor(Date.now() / 1000 + env.ATTESTATION_TTL_SECONDS).toString(),
   );

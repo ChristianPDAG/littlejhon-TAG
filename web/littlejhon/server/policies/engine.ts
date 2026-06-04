@@ -3,8 +3,9 @@ import type { Address, Hex } from "viem";
 import { erc20Abi } from "@/lib/contracts/abis";
 import type { RiskCheckRequest, RiskCheckResponse, RiskReason } from "@/lib/types";
 import { getPublicEnv, getServerEnv } from "@/config/env";
-import { findAsset } from "@/server/assets/registry";
+import { findAsset, resolveExecutableToken } from "@/server/assets/registry";
 import { isSupportedChain } from "@/server/blockchain/chains";
+import { getOnchainTransferPreview } from "@/server/blockchain/onchain";
 import { DEFAULT_POLICY_ID } from "@/server/policies/policy";
 
 type DecodedOperation = {
@@ -92,7 +93,7 @@ export function evaluateRisk(request: RiskCheckRequest): RiskCheckResponse {
   const env = getServerEnv();
   const publicEnv = getPublicEnv();
   const policyId = request.context?.policyId ?? DEFAULT_POLICY_ID;
-  const asset = findAsset(request.token ?? request.asset);
+  const asset = findAsset(request.token ?? request.asset, request.chainId);
   const decoded = decodeOperation(request);
   const reasons: RiskReason[] = [];
   const prerequisites: string[] = [];
@@ -143,7 +144,7 @@ export function evaluateRisk(request: RiskCheckRequest): RiskCheckResponse {
     riskScore = Math.max(riskScore, 72);
   }
 
-  const tokenForExecution = request.token ?? asset?.address;
+  const tokenForExecution = request.token ?? resolveExecutableToken(request.asset, request.chainId);
   if (!tokenForExecution) {
     prerequisites.push("Configure a token address before on-chain execution.");
   }
@@ -237,4 +238,39 @@ export function evaluateRisk(request: RiskCheckRequest): RiskCheckResponse {
 export function createNonce(request: RiskCheckRequest): string {
   const seed = buildOperationHash(request, request.context?.policyId ?? DEFAULT_POLICY_ID);
   return BigInt(`0x${seed.slice(2, 18)}`).toString();
+}
+
+export async function evaluateRiskWithOnchain(request: RiskCheckRequest): Promise<RiskCheckResponse> {
+  const result = evaluateRisk(request);
+  const token = request.token ?? resolveExecutableToken(request.asset, request.chainId);
+
+  if (request.context?.action === "APPROVE" || result.decodedAction === "APPROVE") {
+    return {
+      ...result,
+      onchainPreview: {
+        checked: false,
+        executable: false,
+        canTransfer: false,
+        reason: "Approvals are policy-only checks; ShieldRWAGuard executes transfers.",
+        token,
+      },
+    };
+  }
+
+  const preview = await getOnchainTransferPreview({
+    token,
+    from: request.from,
+    to: request.to,
+    amount: BigInt(request.amount),
+    riskScore: result.riskScore,
+  });
+
+  return {
+    ...result,
+    onchainPreview: preview,
+    prerequisites:
+      preview.canTransfer || result.decision === "BLOCK"
+        ? result.prerequisites
+        : [...result.prerequisites, `On-chain gate: ${preview.reason}`],
+  };
 }

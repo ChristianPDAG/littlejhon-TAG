@@ -1,12 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { verifyTypedData } from "viem";
-import { riskAttestationTypes } from "@/lib/contracts/abis";
-import { getRiskDomain } from "@/server/attestations/sign";
+import { riskAttestationTypes, shieldTransferTypes } from "@/lib/contracts/abis";
+import { getRiskDomain, getTrustedSignerAddress } from "@/server/attestations/sign";
 
 const privateKey = "0x59c6995e998f97a5a0044966f094538e2d1f090a1d9bd8e8874a4e6a366e3a9d";
 
 describe("risk attestation typed data", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("matches the ShieldRWAGuard RiskAttestation shape", async () => {
     const signer = privateKeyToAccount(privateKey);
     const message = {
@@ -36,5 +40,41 @@ describe("risk attestation typed data", () => {
         signature,
       }),
     ).resolves.toBe(true);
+  });
+
+  it("matches the ShieldRWAGuard ShieldTransfer shape", async () => {
+    const signer = privateKeyToAccount(privateKey);
+    const message = {
+      token: "0x1111111111111111111111111111111111111111",
+      from: signer.address,
+      to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      amount: BigInt(25_000_000),
+      nonce: BigInt(1),
+      deadline: BigInt(1_780_000_000),
+    } as const;
+
+    const signature = await signer.signTypedData({
+      domain: getRiskDomain(46630),
+      types: shieldTransferTypes,
+      primaryType: "ShieldTransfer",
+      message,
+    });
+
+    await expect(
+      verifyTypedData({
+        address: signer.address,
+        domain: getRiskDomain(46630),
+        types: shieldTransferTypes,
+        primaryType: "ShieldTransfer",
+        message,
+        signature,
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it("treats an invalid TRUSTED_SIGNER_PRIVATE_KEY as unconfigured", () => {
+    vi.stubEnv("TRUSTED_SIGNER_PRIVATE_KEY", "asd");
+
+    expect(getTrustedSignerAddress()).toBeNull();
   });
 });

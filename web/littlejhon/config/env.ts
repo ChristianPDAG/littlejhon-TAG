@@ -12,7 +12,7 @@ const optionalAddressSchema = z.preprocess(
 
 const privateKeySchema = z.preprocess(
   (value) => (value === "" ? undefined : value),
-  z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Expected a 32-byte private key").optional(),
+  z.string().optional(),
 ) as z.ZodType<Hex | undefined>;
 
 const publicEnvSchema = z.object({
@@ -25,11 +25,14 @@ const publicEnvSchema = z.object({
   NEXT_PUBLIC_COMPLIANCE_REGISTRY_ADDRESS: addressSchema.default("0x5886F06c5cD7eC7E07396D4787fca22A965032C5"),
   NEXT_PUBLIC_PROOF_OF_RESERVE_ADDRESS: addressSchema.default("0x5eD6fe0C2bF02227153CC5482f7d316475a11625"),
   NEXT_PUBLIC_CIRCUIT_BREAKER_ADDRESS: addressSchema.default("0x8A65a9ae5057eB846ce06c1E890f0aB8ADB05777"),
+  NEXT_PUBLIC_SAFETY_VAULT_ADDRESS: addressSchema.default("0x99D1beDEa8d628b2Bd1Cd136F3348d1d680D6682"),
+  NEXT_PUBLIC_GOVERNANCE_TIMELOCK_ADDRESS: addressSchema.default("0x78cce8C167583bf358B3EA1c9C409e13A7Da691a"),
   NEXT_PUBLIC_API_BASE_PATH: z.string().default("/api"),
   NEXT_PUBLIC_ENABLE_ONCHAIN_EXECUTION: z.coerce.boolean().default(false),
   NEXT_PUBLIC_DEMO_AAPL_TOKEN: optionalAddressSchema,
   NEXT_PUBLIC_DEMO_NVDA_TOKEN: optionalAddressSchema,
   NEXT_PUBLIC_DEMO_FAKE_TOKEN: optionalAddressSchema,
+  NEXT_PUBLIC_DEMO_TRWA_TOKEN: optionalAddressSchema,
 });
 
 const serverEnvSchema = publicEnvSchema.extend({
