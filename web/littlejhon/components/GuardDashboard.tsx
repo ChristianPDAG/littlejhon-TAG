@@ -11,6 +11,7 @@ import { RiskPanel } from "@/components/RiskPanel";
 import { ScenarioSelector } from "@/components/ScenarioSelector";
 import { WalletConnectButton } from "@/components/WalletConnectButton";
 import { getPublicEnv } from "@/config/env";
+import { useHydrated } from "@/lib/useHydrated";
 import { demoScenarios, resolveScenarioToken } from "@/lib/demo/scenarios";
 import type { Address } from "viem";
 import type { ContractHealth, RiskCheckRequest, RiskCheckResponse, ScenarioId } from "@/lib/types";
@@ -42,6 +43,9 @@ export function GuardDashboard() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState("");
+  // Wallet address is only known on the client; gate address-dependent UI until
+  // hydrated so the server HTML matches the first client render.
+  const isHydrated = useHydrated();
   const selectedScenario = useMemo(
     () => demoScenarios.find((scenario) => scenario.id === selectedId) ?? demoScenarios[0],
     [selectedId],
@@ -63,7 +67,6 @@ export function GuardDashboard() {
         setHealth(null);
         setHealthStatus("error");
       });
-
     const stored = window.localStorage.getItem(HISTORY_KEY);
     if (stored) {
       // Avoid hydration mismatches by only syncing localStorage after mount.
@@ -177,7 +180,7 @@ export function GuardDashboard() {
                 {selectedScenario.title}: {selectedScenario.description}
               </p>
             </div>
-            <button className="primary-button" disabled={isChecking || !address} onClick={runRiskCheck} type="button">
+            <button className="primary-button" disabled={!isHydrated || isChecking || !address} onClick={runRiskCheck} type="button">
               <RefreshCw size={16} />
               {isChecking ? "Checking" : "Run risk check"}
             </button>
