@@ -1,4 +1,4 @@
-# LittleJhonn 🛡️ Tokenized Asset Guard (TAG)
+# LittleJhon 🛡️ Tokenized Asset Guard (TAG)
 
 > **A pre-trade safety layer for tokenized real-world assets (RWA).**
 > Every transfer is screened by a deterministic risk policy *before* it is signed, then enforced again on-chain by a single guard contract — compliance, proof-of-reserve, circuit breaker, and dual cryptographic signatures, in one `safeTransfer` call.
